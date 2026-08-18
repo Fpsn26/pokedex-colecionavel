@@ -1,13 +1,124 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Get a free hosted Postgres database in seconds: `npx create-db`
+// prisma/schema.prisma
 
 generator client {
-  provider = "prisma-client"
-  output   = "../app/generated/prisma"
+  provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "postgresql"
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// ==============================
+// NextAuth (Prisma Adapter) — modelos padrão exigidos
+// ==============================
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String?   @unique
+  emailVerified DateTime?
+  image         String?
+
+  accounts  Account[]
+  sessions  Session[]
+  userCards UserCard[]
+
+  createdAt DateTime @default(now())
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+// ==============================
+// Domínio: coleção de cartas
+// ==============================
+
+model Serie {
+  id   String @id // id da TCGdex, ex: "sv"
+  name String // ex: "Scarlet & Violet"
+
+  sets Collection[]
+}
+
+model Collection {
+  id        String  @id // id da TCGdex, ex: "sv03"
+  name      String // ex: "Obsidian Flames"
+  logo      String?
+  cardCount Int // total oficial de cartas do set
+
+  serieId String
+  serie   Serie  @relation(fields: [serieId], references: [id])
+
+  cards Card[]
+
+  @@index([serieId])
+}
+
+model Card {
+  id       String  @id // id da TCGdex, ex: "sv03-1"
+  localId  String // número dentro do set, ex: "001"
+  name     String
+  image    String?
+  rarity   String?
+
+  // snapshot de preço da última sincronização (não histórico ainda)
+  pricingCardmarket Float?
+  pricingTcgplayer  Float?
+  pricingUpdatedAt  DateTime?
+
+  collectionId String
+  collection   Collection @relation(fields: [collectionId], references: [id])
+
+  userCards UserCard[]
+
+  @@index([collectionId])
+  @@index([name])
+}
+
+model UserCard {
+  id         String   @id @default(cuid())
+  userId     String
+  cardId     String
+  obtainedAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  card Card @relation(fields: [cardId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, cardId]) // impede marcar a mesma carta duas vezes
+  @@index([userId])
 }
