@@ -1,69 +1,111 @@
-import Image from "next/image";
+"use client";
+// app/page.tsx
+//
+// Visual apenas — os estados de busca/filtro/ordenação já funcionam no
+// cliente sobre os dados mockados. Na Fase 6 você troca mockCollections
+// por dados vindos do servidor (Server Component + fetch ao Prisma).
 
-export default function Home() {
+import { useMemo, useState } from "react";
+import { mockCollections, mockSeries } from "@/lib/mock-data";
+import { CollectionCard } from "@/components/CollectionCard";
+import { CardSearchPreview } from "@/components/CardSearchPreview";
+
+type SortMode = "default" | "most-owned" | "least-owned";
+
+export default function HomePage() {
+  const [setQuery, setSetQuery] = useState("");
+  const [cardQuery, setCardQuery] = useState("");
+  const [serieFilter, setSerieFilter] = useState<string>("all");
+  const [sortMode, setSortMode] = useState<SortMode>("default");
+
+  const filteredCollections = useMemo(() => {
+    let result = mockCollections.filter((c) => {
+      const matchesSerie = serieFilter === "all" || c.serieId === serieFilter;
+      const matchesQuery =
+        setQuery.trim() === "" ||
+        c.name.toLowerCase().includes(setQuery.toLowerCase()) ||
+        c.serieName.toLowerCase().includes(setQuery.toLowerCase());
+      return matchesSerie && matchesQuery;
+    });
+
+    if (sortMode === "most-owned") {
+      result = [...result].sort((a, b) => b.ownedCount - a.ownedCount);
+    } else if (sortMode === "least-owned") {
+      result = [...result].sort((a, b) => a.ownedCount - b.ownedCount);
+    }
+
+    return result;
+  }, [setQuery, serieFilter, sortMode]);
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert h-5 w-[100px]"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the{" "}
-            <code className="rounded bg-black/[.06] px-1.5 py-0.5 font-mono text-[0.9em] dark:bg-white/[.08]">
-              page.tsx
-            </code>{" "}
-            file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
+    <main className="min-h-screen bg-[#14121F] text-white">
+      <div className="mx-auto max-w-6xl px-6 py-10">
+        <header className="mb-10">
+          <p className="font-mono text-xs uppercase tracking-[0.2em] text-white/40">
+            álbum de figurinhas
           </p>
+          <h1 className="font-display mt-1 text-3xl font-semibold tracking-tight">
+            Sua coleção Pokémon
+          </h1>
+        </header>
+
+        {/* Busca de carta específica, com prévia mostrando numeração */}
+        <div className="relative mb-4 max-w-md">
+          <input
+            value={cardQuery}
+            onChange={(e) => setCardQuery(e.target.value)}
+            placeholder="Buscar uma carta pelo nome..."
+            className="w-full rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-2.5 text-sm placeholder:text-white/30 focus:outline-none focus:ring-2 focus:ring-violet-400/50"
+          />
+          <CardSearchPreview query={cardQuery} />
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+
+        {/* Busca de set/série + filtro + ordenação */}
+        <div className="mb-8 flex flex-wrap gap-3">
+          <input
+            value={setQuery}
+            onChange={(e) => setSetQuery(e.target.value)}
+            placeholder="Buscar coleção ou série..."
+            className="flex-1 min-w-[200px] rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-2.5 text-sm placeholder:text-white/30 focus:outline-none focus:ring-2 focus:ring-violet-400/50"
+          />
+
+          <select
+            value={serieFilter}
+            onChange={(e) => setSerieFilter(e.target.value)}
+            className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-400/50"
           >
-            <Image
-              className="dark:invert h-[14px] w-4"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+            <option value="all">Todas as séries</option>
+            {mockSeries.map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.name}
+              </option>
+            ))}
+          </select>
+
+          <select
+            value={sortMode}
+            onChange={(e) => setSortMode(e.target.value as SortMode)}
+            className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-400/50"
           >
-            Documentation
-          </a>
+            <option value="default">Ordem padrão</option>
+            <option value="most-owned">Mais cartas primeiro</option>
+            <option value="least-owned">Menos cartas primeiro</option>
+          </select>
         </div>
-      </main>
-    </div>
+
+        {/* Grid de coleções */}
+        {filteredCollections.length > 0 ? (
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+            {filteredCollections.map((c) => (
+              <CollectionCard key={c.id} collection={c} />
+            ))}
+          </div>
+        ) : (
+          <p className="py-16 text-center text-sm text-white/40">
+            Nenhuma coleção encontrada com esses filtros.
+          </p>
+        )}
+      </div>
+    </main>
   );
 }

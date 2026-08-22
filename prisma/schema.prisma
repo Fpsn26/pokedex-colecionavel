@@ -115,6 +115,8 @@ model UserCard {
   userId     String
   cardId     String
   obtainedAt DateTime @default(now())
+  quantity   Int      @default(1)
+  foil     Boolean  @default(false)
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
   card Card @relation(fields: [cardId], references: [id], onDelete: Cascade)
